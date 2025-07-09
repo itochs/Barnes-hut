@@ -5,7 +5,10 @@
       "name": "start",
       "command": "yarn start",
       "runAtStart": true,
-      "preview": { "port": 5000 }
+      "preview": { "port": 5000 },
+      "restartOn":{
+        "files":["${file}"]
+      }
     }
   }
 }
