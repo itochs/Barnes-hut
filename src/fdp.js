@@ -32,34 +32,33 @@ class Node {
 const quotientForce = (weight, alpha, beta) => {
   /**
    * 指定されたノードペアに働く力を計算します。
-   * @param {Node[][]} node_pairs - 力の計算対象となるノードのペア
-   * @param {number[][]} distance_matrix - 全ノード間のグラフ上の最短距離行列
+   * @param {Node[][]} nodePairs - 力の計算対象となるノードのペア
+   * @param {number[][]} distanceMatrix - 全ノード間のグラフ上の最短距離行列
    * @returns {number[][]} - 各ノードに働く力のベクトル [fx, fy] の配列
    */
-  function force(node_pairs, distance_matrix) {
-    // 1次元方向の力の成分を計算する
-    function force_1d(xi, xj, actual_distance, graph_distance) {
-      // 単位ベクトル e_{ij} はノード xi から xj へ向かう方向
-      let ex = (xj - xi) / actual_distance;
-      return (
-        (weight * Math.pow(actual_distance, alpha) * ex) /
-        Math.pow(graph_distance, beta)
-      );
-    }
+  function force(nodePairs, distanceMatrix) {
     // 各ノードに働く力の合計を初期化
-    let f = new Array(distance_matrix.length).fill(0).map(() => [0, 0]);
-    for (let [xi, xj] of node_pairs) {
-      const dx = xj.p.x - xi.p.x;
-      const dy = xj.p.y - xi.p.y;
-      // 距離が0にならないように微小な値を保証
-      const d = max(0.001, Math.hypot(dx, dy));
-      const graph_dist = distance_matrix[xi.index][xj.index];
+    let f = new Array(distanceMatrix.length).fill(0).map(() => [0, 0]);
+    for (let [node1, node2] of nodePairs) {
+      // Renamed xi, xj to node1, node2 for clarity
+      const dx = node2.p.x - node1.p.x;
+      const dy = node2.p.y - node1.p.y;
+      const d = max(0.001, Math.hypot(dx, dy)); // Use max for robustness, respecting existing global function
 
-      // x方向とy方向の力を計算し、加算
-      f[xi.index][0] += force_1d(xi.p.x, xj.p.x, d, graph_dist);
-      f[xi.index][1] += force_1d(xi.p.y, xj.p.y, d, graph_dist);
+      const graph_dist = distanceMatrix[node1.index][node2.index];
+
+      // Calculate the magnitude of the force
+      const forceMagnitude =
+        (weight * Math.pow(d, alpha)) / Math.pow(graph_dist, beta);
+
+      // Calculate the unit vector components
+      const ux = dx / d;
+      const uy = dy / d;
+
+      // Apply force to node1 from node2
+      f[node1.index][0] += forceMagnitude * ux;
+      f[node1.index][1] += forceMagnitude * uy;
     }
-
     return f;
   }
 
@@ -75,7 +74,9 @@ const quotientForce = (weight, alpha, beta) => {
 const calc_distance_matrix = (nodes, edgeIndices) => {
   let n = nodes.length;
   // 距離行列を無限大（または大きな数）で初期化
-  let distance_matrix = new Array(n).fill(0).map((_) => new Array(n).fill(Infinity));
+  let distance_matrix = new Array(n)
+    .fill(0)
+    .map((_) => new Array(n).fill(Infinity));
   for (let i = 0; i < n; i++) {
     distance_matrix[i][i] = 0; // 自分自身への距離は0
   }
@@ -133,11 +134,15 @@ class FDPLayout {
 
     // --- 斥力の計算 ---
     // 斥力はすべてのノード間に働く (d^-1に比例)
-    const applyRepulsiveForce = quotientForce(-0.1, -1, 0);
-    const repulsivePairs = this.nodes
-      .map((v) => this.nodes.map((u) => (v.index !== u.index ? [v, u] : null)))
-      .flat()
-      .filter(p => p != null);
+    const applyRepulsiveForce = quotientForce(-1, -1, 0);
+    const repulsivePairs = [];
+    for (let i = 0; i < this.nodes.length; i++) {
+      for (let j = 0; j < this.nodes.length; j++) {
+        if (i != j) {
+          repulsivePairs.push([this.nodes[i], this.nodes[j]]);
+        }
+      }
+    }
     const repulsiveForce = applyRepulsiveForce(
       repulsivePairs,
       this.distance_matrix
@@ -151,22 +156,19 @@ class FDPLayout {
       ];
       return sumForce;
     });
+    console.log("temperature", temperature);
+    console.log("sum of force");
+    console.table(sumEachForce);
 
     // --- ノード位置の更新 ---
     let n = this.nodes.length;
     this.nodes = this.nodes.map((v) => {
       const clamp = (x, l, r) => min(r, max(l, x));
       // 力と温度に基づいて位置を更新
-      v.p.x = clamp(
-        v.p.x + sumEachForce[v.index][0] * temperature,
-        0,
-        width
-      );
-      v.p.y = clamp(
-        v.p.y + sumEachForce[v.index][1] * temperature,
-        0,
-        height
-      );
+      const newX = v.p.x + sumEachForce[v.index][0] * temperature;
+      const newY = v.p.y + sumEachForce[v.index][1] * temperature;
+      v.p.x = clamp(newX, 0, Math.sqrt(n));
+      v.p.y = clamp(newY, 0, Math.sqrt(n));
       return v;
     });
   }
