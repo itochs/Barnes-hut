@@ -192,4 +192,3 @@ class BarnesHutTree {
   }
 }
 
-// export {BarnesHutTree, Point, Boundary}
