@@ -45,7 +45,7 @@ const quotientForce = (weight, alpha, beta) => {
       const dy = node2.p.y - node1.p.y;
       const d = max(0.001, Math.hypot(dx, dy)); // Use max for robustness, respecting existing global function
 
-      const graph_dist = distanceMatrix[node1.index][node2.index];
+      const graph_dist = distanceMatrix?.[node1.index][node2.index] || 1;
 
       // Calculate the magnitude of the force
       const forceMagnitude =
@@ -64,7 +64,6 @@ const quotientForce = (weight, alpha, beta) => {
 
   return force;
 };
-
 /**
  * @class FDPLayout
  * @description 力指向配置法によるレイアウト計算を管理します。
@@ -73,9 +72,6 @@ class FDPLayout {
   constructor(nodes, edgeIndices) {
     this.nodes = nodes;
     this.edgeIndices = edgeIndices;
-    // Barnes-Hut木はここでは斥力計算の高速化のために利用可能（現在は未使用）
-    this.tree = new BarnesHutTree(new Boundary(0, 0, width, height));
-    this.renderer = new RendererBHT(this.tree);
     // 全ノード間の最短距離をあらかじめ計算
     this.distance_matrix = calc_distance_matrix(nodes, this.edgeIndices);
   }
@@ -84,7 +80,7 @@ class FDPLayout {
    * レイアウトを1ステップ更新します。
    * @param {number} temperature - シミュレーションの温度。高いほどノードの移動量が大きくなる。
    */
-  update(temperature) {
+  update(temperature, threshold = 0.81) {
     // --- 引力の計算 ---
     // 引力はエッジで繋がったノード間にのみ働く (d^2に比例)
     const applyAttractiveForce = quotientForce(1, 2, 0);
@@ -100,12 +96,40 @@ class FDPLayout {
     // 斥力はすべてのノード間に働く (d^-1に比例)
     const applyRepulsiveForce = quotientForce(-1, -1, 0);
     const repulsivePairs = [];
-    for (let i = 0; i < this.nodes.length; i++) {
-      for (let j = 0; j < this.nodes.length; j++) {
-        if (i != j) {
-          repulsivePairs.push([this.nodes[i], this.nodes[j]]);
+    const repulsivePairsBH = (tree, node_index, repulsivePairs) => {
+      const { gravityPoint } = tree;
+      if (gravityPoint === null) {
+        return;
+      }
+      const { x, y } = this.nodes[node_index].p;
+      const dist = Math.hypot(x - gravityPoint.x, y - gravityPoint.y);
+      if (dist < 0.001) {
+        return;
+      }
+      if (tree.isLeaf() || threshold * dist * dist > tree.boundary.area()) {
+        repulsivePairs.push([
+          this.nodes[node_index],
+          new Node(gravityPoint.x, gravityPoint.y, this.nodes.length),
+        ]);
+      } else {
+        for (const child of tree.children()) {
+          repulsivePairsBH(child, node_index, repulsivePairs);
         }
       }
+    };
+    const tree = new BarnesHutTree(
+      new Boundary(
+        0,
+        0,
+        Math.sqrt(this.nodes.length),
+        Math.sqrt(this.nodes.length)
+      )
+    );
+    for (const { p } of this.nodes) {
+      tree.add(p);
+    }
+    for (let i = 0; i < this.nodes.length; i++) {
+      repulsivePairsBH(tree, i, repulsivePairs);
     }
     const repulsiveForce = applyRepulsiveForce(
       repulsivePairs,
