@@ -49,6 +49,10 @@ class Boundary {
     let containY = between(point.y, this.y, this.y + this.h);
     return containX && containY;
   }
+
+  area() {
+    return this.w * this.h;
+  }
 }
 
 /**
@@ -99,26 +103,47 @@ class BarnesHutTree {
    * @param {Point} point - 追加する点
    */
   add(point) {
-    // 葉ノードで、まだ点がなければ、点を格納
-    if (this.isLeaf() && this.point == null) {
-      this.point = point;
-    } else {
-      // 内部ノードの場合、または葉ノードに既に点がある場合
-      if (this.point != null) {
-        // 葉ノードに既存の点がある場合、まず空間を分割
-        this.separateBoundary();
-        // 既存の点を適切な子ノードに移動
-        let subtree = this.containSubtree(this.point);
-        subtree.add(this.point);
-        this.point = null; // 内部ノードになるので、直接の点はnullにする
-      }
-
-      // 新しい点を適切な子ノードに追加
-      let subtree = this.containSubtree(point);
-      subtree.add(point);
+    // 点がこのノードの境界内にない場合は処理しない
+    if (!this.boundary.contain(point)) {
+      return;
     }
 
-    // 点の追加後、重心を更新
+    // ケース1: このノードが内部ノードの場合
+    if (!this.isLeaf()) {
+      this.containSubtree(point).add(point);
+      this.updateGravityPoint();
+      return;
+    }
+
+    // ケース2: このノードが葉ノードの場合
+    // 2a: 葉ノードが空の場合
+    if (this.point == null) {
+      this.point = point;
+      this.updateGravityPoint();
+      return;
+    }
+
+    // 2b: 葉ノードに既に点が存在する場合 (ノードを分割)
+
+    // 無限再帰を防ぐため、座標が完全に一致していたら微小にずらす
+    if (this.point.x === point.x && this.point.y === point.y) {
+      point.x += (Math.random() - 0.5) * 0.001;
+      point.y += (Math.random() - 0.5) * 0.001;
+    }
+
+    // 既存の点を保持
+    const existingPoint = this.point;
+    // このノードは内部ノードになるため、点をクリア
+    this.point = null;
+
+    // 空間を4つに分割
+    this.separateBoundary();
+
+    // 既存の点と新しい点を、それぞれ適切な子ノードに追加する
+    this.containSubtree(existingPoint).add(existingPoint);
+    this.containSubtree(point).add(point);
+
+    // 重心を更新
     this.updateGravityPoint();
   }
 
@@ -141,9 +166,9 @@ class BarnesHutTree {
    * @returns {BarnesHutTree | null} - 対応する子ノード
    */
   containSubtree(point) {
-    if (!this.boundary.contain(point)) {
-      return null;
-    }
+    // if (!this.boundary.contain(point)) {
+    //   return null;
+    // }
 
     if (point.y <= this.boundary.y + this.boundary.h / 2) {
       // 上半分
@@ -158,8 +183,6 @@ class BarnesHutTree {
       }
       return this.br; // 右下
     }
-
-    return null;
   }
 
   /**
@@ -191,4 +214,3 @@ class BarnesHutTree {
     }
   }
 }
-
