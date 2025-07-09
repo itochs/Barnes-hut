@@ -1,4 +1,18 @@
+/**
+ * @file Barnes-Hutアルゴリズムの木構造（Quadtree）を実装します。
+ * 空間を再帰的に4つの象限に分割し、粒子（ポイント）を効率的に管理します。
+ */
+
+/**
+ * @class Point
+ * @description 2次元空間上の点（粒子）を表します。位置(x, y)と質量(q)を持ちます。
+ */
 class Point {
+  /**
+   * @param {number} x - x座標
+   * @param {number} y - y座標
+   * @param {number} [q=1] - 質量（電荷や重力など）
+   */
   constructor(x, y, q = 1) {
     this.x = x;
     this.y = y;
@@ -6,7 +20,17 @@ class Point {
   }
 }
 
+/**
+ * @class Boundary
+ * @description 空間内の矩形領域を定義します。Quadtreeの各ノードが担当する範囲を示します。
+ */
 class Boundary {
+  /**
+   * @param {number} x - 矩形の左上のx座標
+   * @param {number} y - 矩形の左上のy座標
+   * @param {number} w - 矩形の幅
+   * @param {number} h - 矩形の高さ
+   */
   constructor(x, y, w, h) {
     this.x = x;
     this.y = y;
@@ -14,6 +38,11 @@ class Boundary {
     this.h = h;
   }
 
+  /**
+   * 指定された点がこの境界内に含まれるか判定します。
+   * @param {Point} point - 判定対象の点
+   * @returns {boolean} - 点が境界内であればtrue
+   */
   contain(point) {
     let between = (x, left, right) => left <= x && x <= right;
     let containX = between(point.x, this.x, this.x + this.w);
@@ -22,23 +51,39 @@ class Boundary {
   }
 }
 
+/**
+ * @class BarnesHutTree
+ * @description Barnes-Hutアルゴリズムの本体であるQuadtree（四分木）です。
+ */
 class BarnesHutTree {
+  /**
+   * @param {Boundary} boundary - この木（ノード）が担当する空間領域
+   */
   constructor(boundary) {
-    this.point = null;
-    this.boundary = boundary;
-    this.tl = null;
-    this.tr = null;
-    this.bl = null;
-    this.br = null;
-    this.gravityPoint = null;
+    this.point = null; // このノードに直接格納されている点
+    this.boundary = boundary; // このノードが担当する領域
+    // 4つの子ノード（象限）
+    this.tl = null; // Top-Left
+    this.tr = null; // Top-Right
+    this.bl = null; // Bottom-Left
+    this.br = null; // Bottom-Right
+    this.gravityPoint = null; // このノードに含まれる全点の重心
   }
 
+  /**
+   * このノードが葉（子ノードを持たない）であるか判定します。
+   * @returns {boolean} - 葉であればtrue
+   */
   isLeaf() {
     return (
       this.tl == null && this.tr == null && this.bl == null && this.br == null
     );
   }
 
+  /**
+   * このノードの子ノードのリストを返します。
+   * @returns {BarnesHutTree[]}
+   */
   children() {
     let child = [];
     if (this.tl != null) child.push(this.tl);
@@ -49,25 +94,37 @@ class BarnesHutTree {
     return child;
   }
 
+  /**
+   * 木に新しい点を追加します。
+   * @param {Point} point - 追加する点
+   */
   add(point) {
+    // 葉ノードで、まだ点がなければ、点を格納
     if (this.isLeaf() && this.point == null) {
       this.point = point;
     } else {
-      // add to subtree
+      // 内部ノードの場合、または葉ノードに既に点がある場合
       if (this.point != null) {
+        // 葉ノードに既存の点がある場合、まず空間を分割
         this.separateBoundary();
+        // 既存の点を適切な子ノードに移動
         let subtree = this.containSubtree(this.point);
         subtree.add(this.point);
-        this.point = null;
+        this.point = null; // 内部ノードになるので、直接の点はnullにする
       }
 
+      // 新しい点を適切な子ノードに追加
       let subtree = this.containSubtree(point);
       subtree.add(point);
     }
 
+    // 点の追加後、重心を更新
     this.updateGravityPoint();
   }
 
+  /**
+   * 現在のノードの境界を4つの子象限に分割します。
+   */
   separateBoundary() {
     let { x, y, w, h } = this.boundary;
     this.tl = new BarnesHutTree(new Boundary(x, y, w / 2, h / 2));
@@ -78,31 +135,36 @@ class BarnesHutTree {
     );
   }
 
+  /**
+   * 指定された点がどの象限（子ノード）に含まれるかを返します。
+   * @param {Point} point - 判定対象の点
+   * @returns {BarnesHutTree | null} - 対応する子ノード
+   */
   containSubtree(point) {
     if (!this.boundary.contain(point)) {
       return null;
     }
 
     if (point.y <= this.boundary.y + this.boundary.h / 2) {
-      // top left
+      // 上半分
       if (point.x <= this.boundary.x + this.boundary.w / 2) {
-        return this.tl;
+        return this.tl; // 左上
       }
-      // top right
-      return this.tr;
+      return this.tr; // 右上
     } else {
-      // bottom left
+      // 下半分
       if (point.x <= this.boundary.x + this.boundary.w / 2) {
-        return this.bl;
+        return this.bl; // 左下
       }
-      // bottom right
-      return this.br;
+      return this.br; // 右下
     }
 
     return null;
   }
 
-  // 子供の重心 の重心.
+  /**
+   * このノード（およびその全ての子孫）に含まれる点の重心を計算・更新します。
+   */
   updateGravityPoint() {
     if (this.isLeaf()) {
       this.gravityPoint = this.point;
@@ -112,6 +174,7 @@ class BarnesHutTree {
     let totalQ = 0;
     let weightX = 0;
     let weightY = 0;
+    // 子ノードの重心を使って、このノードの重心を計算
     this.children().forEach((t) => {
       if (t.gravityPoint != null) {
         let { x, y, q } = t.gravityPoint;
