@@ -73,6 +73,9 @@ class FDPLayout {
   constructor(nodes, edgeIndices) {
     this.nodes = nodes;
     this.edgeIndices = edgeIndices;
+    // Barnes-Hut木はここでは斥力計算の高速化のために利用可能（現在は未使用）
+    this.tree = new BarnesHutTree(new Boundary(0, 0, width, height));
+    this.renderer = new RendererBHT(this.tree);
     // 全ノード間の最短距離をあらかじめ計算
     this.distance_matrix = calc_distance_matrix(nodes, this.edgeIndices);
   }
