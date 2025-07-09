@@ -177,7 +177,7 @@ class FDPLayout {
    * 指定された反復回数だけシミュレーションを実行します。
    * @param {number} [iter=100] - 反復回数
    */
-  start(iter = 100) {
+  start(iter = 1000) {
     const maxTemperature = 1.0;
     let temperature = maxTemperature;
     // シミュレーテッドアニーリングのように、徐々に温度を下げる
@@ -187,4 +187,3 @@ class FDPLayout {
     }
   }
 }
-

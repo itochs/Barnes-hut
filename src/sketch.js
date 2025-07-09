@@ -56,14 +56,15 @@ function draw() {
   background(255); // 背景を白で塗りつぶし
 
   // レイアウトを1ステップ更新
-  layout.update(temperature);
+  layout.start();
 
   // --- 描画処理 ---
   const n = layout.nodes.length;
+  const r = 12;
   const scaleCoords = (p) => {
     // レイアウト空間の座標をキャンバスの座標に変換
-    let x = (p.x / Math.sqrt(n)) * width;
-    let y = height - (p.y / Math.sqrt(n)) * height;
+    let x = r + (p.x / Math.sqrt(n)) * (width - r * 2);
+    let y = r + height - r * 2 - (p.y / Math.sqrt(n)) * (height - r * 2);
     return [x, y];
   };
 
@@ -84,14 +85,5 @@ function draw() {
     ellipse(scaledX, scaledY, 12, 12);
   });
 
-  // --- シミュレーションの制御 ---
-  // 温度を徐々に下げる（シミュレーテッドアニーリング）
-  // temperature = (1 / 1000) * (1000 - t - 1);
-  temperature *= 0.9;
-  t += 1;
-  // 温度が一定以下になったら、シミュレーションを停止して安定させる
-  if (temperature < 0.001) {
-    noLoop();
-    console.log("Simulation finished.");
-  }
+  noLoop();
 }
