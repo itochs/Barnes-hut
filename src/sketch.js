@@ -28,11 +28,16 @@ function setup() {
     [0.11634882392203322, 1.890762445560767],
   ];
 
+  // const graph = [[1], [0]];
+  // const pos = [
+  //   [0, 0],
+  //   [2, 1],
+  // ];
+
   // --- データ構造の変換 ---
   // ノードオブジェクトの配列を作成
   const nodes = pos.map(([x, y], i) => {
-    // 座標をキャンバスサイズに合わせる
-    let n = new Node(x * 100, y * 100, i);
+    let n = new Node(x, y, i);
     return n;
   });
   // エッジリスト（インデックスのペア）を作成
@@ -40,7 +45,7 @@ function setup() {
 
   // レイアウトエンジンを初期化
   layout = new FDPLayout(nodes, edgeIndices);
-  frameRate(30); // フレームレートを設定
+  frameRate(5); // フレームレートを設定
 }
 
 /**
@@ -54,9 +59,12 @@ function draw() {
   layout.update(temperature);
 
   // --- 描画処理 ---
+  const n = layout.nodes.length;
   const scaleCoords = (p) => {
     // レイアウト空間の座標をキャンバスの座標に変換
-    return [p.x, p.y];
+    let x = (p.x / Math.sqrt(n)) * width;
+    let y = height - (p.y / Math.sqrt(n)) * height;
+    return [x, y];
   };
 
   // エッジ（線）を描画
@@ -78,13 +86,12 @@ function draw() {
 
   // --- シミュレーションの制御 ---
   // 温度を徐々に下げる（シミュレーテッドアニーリング）
-  temperature *= 0.99;
+  // temperature = (1 / 1000) * (1000 - t - 1);
+  temperature *= 0.9;
   t += 1;
-
   // 温度が一定以下になったら、シミュレーションを停止して安定させる
-  if (temperature < 0.01) {
+  if (temperature < 0.001) {
     noLoop();
     console.log("Simulation finished.");
   }
-  console.log("temp", temperature, "iter t", t);
 }
