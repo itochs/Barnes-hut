@@ -66,42 +66,6 @@ const quotientForce = (weight, alpha, beta) => {
 };
 
 /**
- * ワーシャル-フロイド法を用いて、全ノードペア間の最短経路長を計算します。
- * @param {Node[]} nodes - ノードの配列
- * @param {number[][]} edgeIndices - エッジのインデックスペアの配列
- * @returns {number[][]} - 最短距離行列
- */
-const calc_distance_matrix = (nodes, edgeIndices) => {
-  let n = nodes.length;
-  // 距離行列を無限大（または大きな数）で初期化
-  let distance_matrix = new Array(n)
-    .fill(0)
-    .map((_) => new Array(n).fill(Infinity));
-  for (let i = 0; i < n; i++) {
-    distance_matrix[i][i] = 0; // 自分自身への距離は0
-  }
-  // 隣接しているノード間の距離は1
-  for (let [i, j] of edgeIndices) {
-    distance_matrix[i][j] = 1;
-    distance_matrix[j][i] = 1;
-  }
-
-  // ワーシャル-フロイド法
-  for (let k = 0; k < n; k++) {
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        // iからjへの最短経路は、kを経由する場合としない場合の小さい方
-        distance_matrix[i][j] = min(
-          distance_matrix[i][j],
-          distance_matrix[i][k] + distance_matrix[k][j]
-        );
-      }
-    }
-  }
-  return distance_matrix;
-};
-
-/**
  * @class FDPLayout
  * @description 力指向配置法によるレイアウト計算を管理します。
  */
@@ -123,7 +87,7 @@ class FDPLayout {
   update(temperature) {
     // --- 引力の計算 ---
     // 引力はエッジで繋がったノード間にのみ働く (d^2に比例)
-    const applyAttractiveForce = quotientForce(1, 2, 1);
+    const applyAttractiveForce = quotientForce(1, 2, 0);
     const attractivePairs = this.edgeIndices
       .map(([i, j]) => [[this.nodes[i], this.nodes[j]]])
       .flat();
@@ -187,3 +151,39 @@ class FDPLayout {
     }
   }
 }
+
+/**
+ * ワーシャル-フロイド法を用いて、全ノードペア間の最短経路長を計算します。
+ * @param {Node[]} nodes - ノードの配列
+ * @param {number[][]} edgeIndices - エッジのインデックスペアの配列
+ * @returns {number[][]} - 最短距離行列
+ */
+const calc_distance_matrix = (nodes, edgeIndices) => {
+  let n = nodes.length;
+  // 距離行列を無限大（または大きな数）で初期化
+  let distance_matrix = new Array(n)
+    .fill(0)
+    .map((_) => new Array(n).fill(Infinity));
+  for (let i = 0; i < n; i++) {
+    distance_matrix[i][i] = 0; // 自分自身への距離は0
+  }
+  // 隣接しているノード間の距離は1
+  for (let [i, j] of edgeIndices) {
+    distance_matrix[i][j] = 1;
+    distance_matrix[j][i] = 1;
+  }
+
+  // ワーシャル-フロイド法
+  for (let k = 0; k < n; k++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        // iからjへの最短経路は、kを経由する場合としない場合の小さい方
+        distance_matrix[i][j] = min(
+          distance_matrix[i][j],
+          distance_matrix[i][k] + distance_matrix[k][j]
+        );
+      }
+    }
+  }
+  return distance_matrix;
+};
