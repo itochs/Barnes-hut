@@ -103,6 +103,8 @@ class BarnesHutTree {
    * @param {Point} point - 追加する点
    */
   add(point) {
+    // ここを実装
+    this.point = point;
     // 点がこのノードの境界内にない場合は処理しない
 
     // ケース1: このノードが領域を保持するノードの場合
@@ -112,13 +114,12 @@ class BarnesHutTree {
 
     // 2b: 葉ノードに既に点が存在する場合 (ノードを分割)
 
-    // 無限再帰を防ぐため、座標が完全に一致していたら微小にずらす
-    // いい感じの実装わからんかったのでずらしちゃった
-    if (this.point.x === point.x && this.point.y === point.y) {
-      point.x += (Math.random() - 0.5) * 0.001;
-      point.y += (Math.random() - 0.5) * 0.001;
+    // 座標がほぼ一致していたら一つの粒子としてまとめる
+    const dist = Math.hypot(this.point.x - point.x, this.point.y - point.y);
+    if (dist < this.sameNodeThreshold) {
+      this.point.q += point.q;
+      return;
     }
-
 
     // このノードは領域を保持するノードになるため、点をクリア
 
@@ -171,5 +172,6 @@ class BarnesHutTree {
   updateGravityPoint() {
     // 葉ノードならそのままが重心
     // 子ノードの重心を使って、このノードの重心を計算
+    this.gravityPoint = this.point;
   }
 }
