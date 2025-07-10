@@ -4,7 +4,7 @@
   "description": "A template for HTML and CSS",
   "main": "index.html",
   "scripts": {
-    "start": "vite --port 2222"
+    "start": "vite --port 5000"
   },
   "keywords": [
     "html",
