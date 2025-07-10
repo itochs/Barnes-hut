@@ -94,21 +94,14 @@ class FDPLayout {
     );
 
     // --- 斥力の計算 ---
-    // 斥力はすべてのノード間に働く (d^-1に比例)
     const applyRepulsiveForce = quotientForce(-1, -1, 0);
     const repulsivePairs = [];
-    for (let i = 0; i < this.nodes.length; i++) {
-      for (let j = 0; j < this.nodes.length; j++) {
-        if (i != j) {
-          repulsivePairs.push([this.nodes[i], this.nodes[j]]);
-        }
-      }
-    }
+    // 実装してください
+
     const repulsiveForce = applyRepulsiveForce(
       repulsivePairs,
       this.distance_matrix
     );
-
     // --- 合力の計算 ---
     const sumEachForce = attractiveForce.map((_, i) => {
       const sumForce = [

@@ -144,9 +144,9 @@ class FDPLayout {
       ];
       return sumForce;
     });
-    console.log("temperature", temperature);
-    console.log("sum of force");
-    console.table(sumEachForce);
+    // console.log("temperature", temperature);
+    // console.log("sum of force");
+    // console.table(sumEachForce);
 
     // --- ノード位置の更新 ---
     let n = this.nodes.length;
