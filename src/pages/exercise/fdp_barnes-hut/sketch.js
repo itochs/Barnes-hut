@@ -45,7 +45,7 @@ function setup() {
 
   // レイアウトエンジンを初期化
   layout = new FDPLayout(nodes, edgeIndices);
-  frameRate(5); // フレームレートを設定
+  frameRate(15); // フレームレートを設定
 }
 
 /**
@@ -56,7 +56,7 @@ function draw() {
   background(255); // 背景を白で塗りつぶし
 
   // レイアウトを1ステップ更新
-  layout.start_exp();
+  layout.update(temperature);
 
   // --- 描画処理 ---
   const n = layout.nodes.length;
@@ -85,5 +85,9 @@ function draw() {
     ellipse(scaledX, scaledY, 12, 12);
   });
 
-  noLoop();
+  temperature *= 0.9;
+  t += 1;
+  if (temperature < 0.001 || t >= 1000) {
+    noLoop();
+  }
 }

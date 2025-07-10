@@ -147,6 +147,8 @@ class FDPLayout {
     // console.log("temperature", temperature);
     // console.log("sum of force");
     // console.table(sumEachForce);
+    console.log("repulsivePairs length", repulsivePairs.length);
+    console.log("all node pair", this.nodes.length ** 2);
 
     // --- ノード位置の更新 ---
     let n = this.nodes.length;
@@ -172,6 +174,15 @@ class FDPLayout {
     for (let t = 0; t < iter; t += 1) {
       this.update(temperature);
       temperature = maxTemperature * (1 - t / iter);
+    }
+  }
+  start_exp(iter = 1000) {
+    const maxTemperature = 1.0;
+    let temperature = maxTemperature;
+    // シミュレーテッドアニーリングのように、徐々に温度を下げる
+    for (let t = 0; t < iter; t += 1) {
+      this.update(temperature);
+      temperature *= 0.9;
     }
   }
 }

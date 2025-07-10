@@ -72,6 +72,7 @@ class BarnesHutTree {
     this.bl = null; // Bottom-Left
     this.br = null; // Bottom-Right
     this.gravityPoint = null; // このノードに含まれる全点の重心
+    this.sameNodeThreshold = 0.001;
   }
 
   /**
@@ -125,10 +126,11 @@ class BarnesHutTree {
 
     // 2b: 葉ノードに既に点が存在する場合 (ノードを分割)
 
-    // 無限再帰を防ぐため、座標が完全に一致していたら微小にずらす
-    if (this.point.x === point.x && this.point.y === point.y) {
-      point.x += (Math.random() - 0.5) * 0.001;
-      point.y += (Math.random() - 0.5) * 0.001;
+    // 座標がほぼ一致していたら一つの粒子としてまとめる
+    const dist = Math.hypot(this.point.x - point.x, this.point.y - point.y);
+    if (dist < this.sameNodeThreshold) {
+      this.point.q += point.q;
+      return;
     }
 
     // 既存の点を保持
