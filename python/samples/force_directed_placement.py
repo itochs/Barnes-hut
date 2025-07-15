@@ -3,9 +3,82 @@ import os
 import random
 
 # プロジェクトのルートディレクトリをsys.pathに追加
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from lib.BarnesHutTree import Point, Node, calculate_repulsive_pairs
+from lib.BarnesHutTree import Point, BarnesHutTree, Boundary
+import math
+
+
+class Node:
+    """シミュレーション内の各ノード（粒子）を表すクラス"""
+
+    def __init__(self, p: Point, id: int):
+        self.p = p  # 位置と質量を持つPointオブジェクト
+        self.id = id  # ノードの一意なID
+
+    def __repr__(self):
+        return f"Node(id={self.id}, p={self.p!r})"
+
+
+def calculate_repulsive_pairs(
+    nodes: list[Node], threshold: float
+) -> list[tuple[Node, Node]]:
+    """
+    Barnes-Hut法を用いて、斥力の計算対象となるノードのペアを計算する。
+
+    :param nodes: 全てのノードのリスト
+    :param threshold: Barnes-Hut法の閾値θ。大きいほど計算は速くなるが精度は落ちる
+    :return: (ノード, 相手ノード/仮想ノード) のタプルのリスト
+    """
+    repulsive_pairs = []
+
+    # 1. すべてのノードを内包するルートの境界を計算し、BHツリーを構築
+    if not nodes:
+        return []
+
+    # ノードが広がるおおよその空間サイズを計算
+    size = math.sqrt(len(nodes))
+    tree = BarnesHutTree(Boundary(0, 0, size, size))
+    for node in nodes:
+        tree.add(node.p)
+
+    # 2. BHツリーを再帰的に探索するヘルパー関数を定義
+    def _find_pairs_recursive(tree_node: BarnesHutTree, current_node: Node):
+        gravity_point = tree_node.gravity_point
+        if gravity_point is None:
+            return  # この領域に粒子がなければ終了
+
+        particle_pos = current_node.p
+        dist = math.hypot(
+            particle_pos.x - gravity_point.x, particle_pos.y - gravity_point.y
+        )
+
+        # 自身との距離がほぼ0の場合は無視
+        if dist < 0.001:
+            return
+
+        # Barnes-Hut法のクライテリオン (s/d < θ)
+        # tree.boundary.area() は s^2 に相当するので、少し変形した式を用いる
+        # θ * d^2 > s^2  <==>  d^2/s^2 > 1/θ
+        is_far_enough = threshold * dist * dist > tree_node.boundary.area()
+
+        if tree_node.is_leaf() or is_far_enough:
+            # 条件を満たした場合 (葉ノード or 十分に遠い)
+            # この領域の重心をひとつの仮想ノードとみなし、ペアとして追加
+            super_node = Node(p=gravity_point, id=-1)  # ID=-1は仮想ノードを示す
+            repulsive_pairs.append((current_node, super_node))
+        else:
+            # 条件を満たさない場合 (内部ノード and 近い)
+            # 子ノードをさらに再帰的に探索
+            for child in tree_node.children():
+                _find_pairs_recursive(child, current_node)
+
+    # 3. すべてのノードに対して、斥力の相手を探す
+    for node in nodes:
+        _find_pairs_recursive(tree, node)
+
+    return repulsive_pairs
+
 
 def main():
     """
@@ -42,7 +115,7 @@ def main():
         # opponentは他のノード、または複数のノードの重心を表す仮想ノード
         dx = node.p.x - opponent.p.x
         dy = node.p.y - opponent.p.y
-        dist = (dx**2 + dy**2)**0.5
+        dist = (dx**2 + dy**2) ** 0.5
 
         if dist > 0:
             # 距離に反比例した斥力を適用
