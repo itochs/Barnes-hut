@@ -20,6 +20,8 @@ uv sync
 uv run python samples/*.py
 ```
 
+- visualizeの結果は`python/dest`ディレクトリが生成されてその中に`png`として出力もされる
+
 - uvを使わない場合
   - `visualize_tree.py`を実行する場合：`matplotlib`を入れる
   - `uv sync`はしなくていい

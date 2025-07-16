@@ -70,11 +70,12 @@ def main():
     plot_tree(ax, tree)
 
     # 5. 画像を保存
-    os.makedirs("./dest", exist_ok=True)
-    output_path = "./dest/barnes_hut_tree.png"
+    save_dir_path = os.path.join(os.path.dirname(__file__), "..", "dest")
+    os.makedirs(save_dir_path, exist_ok=True)
+    output_path = os.path.join(save_dir_path, "barnes_hut_tree.png")
     plt.savefig(output_path)
     print(f"Saved visualization to {output_path}")
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
