@@ -41,6 +41,7 @@ def calculate_repulsive_pairs(
     tree = BarnesHutTree(Boundary(0, 0, size, size))
     for node in nodes:
         tree.add(node.p)
+    tree.update_gravity_point()
 
     # 2. BHツリーを再帰的に探索するヘルパー関数を定義
     def _find_pairs_recursive(tree_node: BarnesHutTree, current_node: Node):
@@ -60,7 +61,7 @@ def calculate_repulsive_pairs(
         # Barnes-Hut法のクライテリオン (s/d < θ)
         # tree.boundary.area() は s^2 に相当するので、少し変形した式を用いる
         # θ * d^2 > s^2  <==>  d^2/s^2 > 1/θ
-        is_far_enough = threshold * dist * dist > tree_node.boundary.area()
+        is_far_enough = threshold * dist * dist > tree_node.boundary.area
 
         if tree_node.is_leaf() or is_far_enough:
             # 条件を満たした場合 (葉ノード or 十分に遠い)
@@ -87,7 +88,13 @@ def main():
     # 1. シミュレーション用のノードをランダムに生成
     num_nodes = 20
     nodes = [
-        Node(p=Point(x=random.uniform(0, 100), y=random.uniform(0, 100)), id=i)
+        Node(
+            p=Point(
+                x=random.uniform(0, math.sqrt(num_nodes)),
+                y=random.uniform(0, math.sqrt(num_nodes)),
+            ),
+            id=i,
+        )
         for i in range(num_nodes)
     ]
 
@@ -97,7 +104,6 @@ def main():
 
     # 2. Barnes-Hut法の閾値θを設定
     # この値が大きいほど、遠くのノード群をより積極的にまとめるため計算は速くなるが、精度は低下する。
-    # 0.5は一般的な値。
     theta = 0.5
 
     # 3. 斥力の計算対象となるペアを見つける
@@ -108,23 +114,30 @@ def main():
     print(f"\n--- Found {len(repulsive_pairs)} Repulsive Pairs (theta={theta}) ---")
 
     # 4. 各ノードに働く斥力を計算し、位置を更新（簡易版）
-    # 本来は力の大きさを距離に応じて減衰させたり、ばねの引力を考慮したりするが、ここでは斥力の影響のみを簡易的に示す。
+    # ここでは斥力の影響のみ
     force_strength = 0.1  # 力の影響の強さ
 
+    node_force = [[0, 0] for _ in range(num_nodes + 1)]
     for node, opponent in repulsive_pairs:
         # opponentは他のノード、または複数のノードの重心を表す仮想ノード
         dx = node.p.x - opponent.p.x
         dy = node.p.y - opponent.p.y
-        dist = (dx**2 + dy**2) ** 0.5
+        dist2 = dx**2 + dy**2
 
-        if dist > 0:
+        if dist2 > 0:
             # 距離に反比例した斥力を適用
-            force_x = (dx / dist) * (opponent.p.q / dist) * force_strength
-            force_y = (dy / dist) * (opponent.p.q / dist) * force_strength
+            force_x = (dx / dist2) * force_strength
+            force_y = (dy / dist2) * force_strength
 
             # ノードの位置を更新
             node.p.x += force_x
             node.p.y += force_y
+            node_force[node.id][0] += force_x
+            node_force[node.id][1] += force_y
+
+    for i in range(num_nodes):
+        nodes[i].p.x += node_force[i][0]
+        nodes[i].p.y += node_force[i][1]
 
     print("\n--- Node Positions After One Iteration of Repulsion ---")
     for node in nodes:
